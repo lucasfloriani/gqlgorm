@@ -28,14 +28,22 @@ func deepFields(obj interface{}, fields []string, level int) (allowedFields []st
 	t := reflect.TypeOf(obj)
 
 	for i := 0; i < s.NumField(); i++ {
-		tag := t.Field(i).Tag
+		typeField := t.Field(i)
+		valueField := s.Field(i)
+		tag := typeField.Tag
+
 		if IsType(tag, SkipTag) {
 			continue
 		}
 
-		fieldName := snakecase.SnakeCase(t.Field(i).Name)
+		if valueField.Kind() == reflect.Ptr && typeField.Type.Elem().Kind() == reflect.Struct && valueField.IsNil() {
+			ptrToZero := reflect.New(typeField.Type.Elem())
+			valueField = ptrToZero.Elem()
+		}
+
+		fieldName := snakecase.SnakeCase(typeField.Name)
 		if IsType(tag, EmbeddedFilter) && contain(fields, fieldName) {
-			allowedFields = append(allowedFields, deepFields(s.Field(i).Interface(), fields, level+1)...)
+			allowedFields = append(allowedFields, deepFields(valueField.Interface(), fields, level+1)...)
 			continue
 		}
 

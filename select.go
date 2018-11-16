@@ -13,7 +13,7 @@ import (
 // GetQueryFields returns a list of field by a GraphQL Type name
 func GetQueryFields(ctx context.Context, name string) (fields []string) {
 	for _, field := range graphql.CollectFieldsCtx(ctx, []string{name}) {
-		fields = append(fields, field.Name)
+		fields = append(fields, snakecase.SnakeCase(field.Name))
 	}
 	return
 }
@@ -48,13 +48,17 @@ func deepFields(obj interface{}, fields []string, level int) (allowedFields []st
 		}
 
 		names := GetAlias(tag)
-		names = append(names, fieldName)
+		names = append(names, cleanString(fieldName))
 		if level != 0 || contains(fields, names) {
 			allowedFields = append(allowedFields, fieldName)
 		}
 	}
 
 	return
+}
+
+func cleanString(name string) string {
+	return strings.TrimSuffix(name, "_id")
 }
 
 func contains(s []string, e []string) bool {

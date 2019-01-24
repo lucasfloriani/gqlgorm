@@ -8,14 +8,46 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/azer/snakecase"
+	"github.com/vektah/gqlparser/ast"
 )
 
 // GetQueryFields returns a list of field by a GraphQL Type name
 func GetQueryFields(ctx context.Context, name string) (fields []string) {
-	for _, field := range graphql.CollectFieldsCtx(ctx, []string{name}) {
+	for _, field := range graphql.CollectFieldsCtx(ctx, []string{}) {
 		fields = append(fields, snakecase.SnakeCase(field.Name))
 	}
 	return
+}
+
+// GetQueryFields2 returns a list of required fields from GraphQL request
+func GetQueryFields2(ctx context.Context, nodes []string) (fields []string) {
+	resolverCtx := graphql.GetResolverContext(ctx)
+	return searchFields(resolverCtx.Field.Selections, nodes)
+}
+
+func searchFields(selectionSet ast.SelectionSet, nodes []string) (fields []string) {
+	for _, selection := range selectionSet {
+		field := castToFieldPointer(selection)
+
+		if len(nodes) == 0 {
+			fields = append(fields, snakecase.SnakeCase(field.Name))
+			continue
+		}
+
+		if field.Name == nodes[0] {
+			if len(nodes) > 1 {
+				fields = append(fields, searchFields(field.SelectionSet, nodes[1:])...)
+				continue
+			}
+			fields = append(fields, searchFields(field.SelectionSet, []string{})...)
+		}
+	}
+
+	return
+}
+
+func castToFieldPointer(a interface{}) *ast.Field {
+	return a.(*ast.Field)
 }
 
 // ConvertToSelectFields converts fields array to select columns string

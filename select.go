@@ -11,16 +11,8 @@ import (
 	"github.com/vektah/gqlparser/ast"
 )
 
-// GetQueryFields returns a list of field by a GraphQL Type name
-func GetQueryFields(ctx context.Context, name string) (fields []string) {
-	for _, field := range graphql.CollectFieldsCtx(ctx, []string{}) {
-		fields = append(fields, snakecase.SnakeCase(field.Name))
-	}
-	return
-}
-
-// GetQueryFields2 returns a list of required fields from GraphQL request
-func GetQueryFields2(ctx context.Context, nodes []string) (fields []string) {
+// GetQueryFields returns a list of required fields from GraphQL request
+func GetQueryFields(ctx context.Context, nodes ...string) (fields []string) {
 	resolverCtx := graphql.GetResolverContext(ctx)
 	return searchFields(resolverCtx.Field.Selections, nodes)
 }

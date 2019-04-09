@@ -11,6 +11,15 @@ import (
 	"github.com/vektah/gqlparser/ast"
 )
 
+// GetUnionFields returns a list of required fields from GraphQL request,
+// even the fields inside selected the union type
+func GetUnionFields(ctx context.Context, unionFieldName string) (fields []string) {
+	for _, field := range graphql.CollectFieldsCtx(ctx, []string{unionFieldName}) {
+		fields = append(fields, snakecase.SnakeCase(field.Name))
+	}
+	return
+}
+
 // GetQueryFields returns a list of required fields from GraphQL request
 func GetQueryFields(ctx context.Context, nodes ...string) (fields []string) {
 	resolverCtx := graphql.GetResolverContext(ctx)
@@ -20,6 +29,10 @@ func GetQueryFields(ctx context.Context, nodes ...string) (fields []string) {
 func searchFields(selectionSet ast.SelectionSet, nodes []string) (fields []string) {
 	for _, selection := range selectionSet {
 		field := castToFieldPointer(selection)
+
+		if field == nil { // Continue if is a union type field (... on Object {...})
+			continue
+		}
 
 		if len(nodes) == 0 {
 			fields = append(fields, snakecase.SnakeCase(field.Name))
@@ -39,7 +52,11 @@ func searchFields(selectionSet ast.SelectionSet, nodes []string) (fields []strin
 }
 
 func castToFieldPointer(a interface{}) *ast.Field {
-	return a.(*ast.Field)
+	value, found := a.(*ast.Field)
+	if found {
+		return value
+	}
+	return nil
 }
 
 // ConvertToSelectFields converts fields array to select columns string
